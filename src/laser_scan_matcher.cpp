@@ -78,6 +78,8 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
     "Which frame to use for the map");
   add_parameter("laser_frame", rclcpp::ParameterValue(std::string("laser")),
     "Which frame to use for the laser");
+  add_parameter("laser_topic", rclcpp::ParameterValue(std::string("scan")),
+    "Which topic to subscrige for the laser_scan");
   add_parameter("kf_dist_linear", rclcpp::ParameterValue(0.10),
     "When to generate keyframe scan.");
   add_parameter("kf_dist_angular", rclcpp::ParameterValue(10.0* (M_PI/180.0)),
@@ -188,6 +190,7 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
   base_frame_ = this->get_parameter("base_frame").as_string();
   odom_frame_ = this->get_parameter("odom_frame").as_string();
   laser_frame_ = this->get_parameter("laser_frame").as_string();
+  laser_topic_ = this->get_parameter("laser_topic").as_string();
   kf_dist_linear_  = this->get_parameter("kf_dist_linear").as_double();
   kf_dist_angular_ = this->get_parameter("kf_dist_angular").as_double();
   odom_topic_   = this->get_parameter("publish_odom").as_string();
@@ -243,7 +246,7 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
 
 
   // Subscribers
-  this->scan_filter_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>("scan", rclcpp::SensorDataQoS(), std::bind(&LaserScanMatcher::scanCallback, this, std::placeholders::_1));
+  this->scan_filter_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(laser_topic_, rclcpp::SensorDataQoS(), std::bind(&LaserScanMatcher::scanCallback, this, std::placeholders::_1));
   tf_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
   if (publish_tf_)
     tfB_ = std::make_shared<tf2_ros::TransformBroadcaster>(*this);
