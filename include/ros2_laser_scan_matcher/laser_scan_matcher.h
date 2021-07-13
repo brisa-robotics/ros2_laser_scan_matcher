@@ -79,6 +79,7 @@ private:
   std::string base_frame_;
   std::string odom_frame_;
   std::string laser_scan_frame_;
+  std::string laser_scan_topic_;
   std::string odom_topic_;
 
 
