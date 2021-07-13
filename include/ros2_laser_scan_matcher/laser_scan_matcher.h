@@ -88,6 +88,13 @@ private:
   double kf_dist_linear_sq_;
   double kf_dist_angular_;
 
+  // Laser params
+  double range_min_;
+  double range_max_;
+  double angle_min_;
+  double angle_max_;
+  double angle_increment_;
+  
   bool initialized_;
   bool publish_odom_;
   bool publish_tf_;

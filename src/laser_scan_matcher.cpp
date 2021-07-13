@@ -85,7 +85,18 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
   add_parameter("kf_dist_angular", rclcpp::ParameterValue(10.0* (M_PI/180.0)),
     "When to generate keyframe scan.");
   
+  // Laser params
 
+  add_parameter("range_min", rclcpp::ParameterValue(-10),
+    "Minimum range of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
+  add_parameter("range_max", rclcpp::ParameterValue(-10),
+    "Maximum range of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
+  add_parameter("angle_min", rclcpp::ParameterValue(-10),
+    "Minimum angle of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
+  add_parameter("range_size_", rclcpp::ParameterValue(-10),
+    "Number of samples of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
+  add_parameter("angle_increment", rclcpp::ParameterValue(-10),
+    "Angle increment of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
 
   // CSM parameters - comments copied from algos.h (by Andrea Censi)
   add_parameter("max_angular_correction_deg", rclcpp::ParameterValue(45.0),
@@ -196,6 +207,12 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
   odom_topic_   = this->get_parameter("publish_odom").as_string();
   publish_tf_   = this->get_parameter("publish_tf").as_bool(); 
 
+  range_min_ = this->get_parameter("range_min").as_double();
+  range_max_ = this->get_parameter("range_max").as_double();
+  angle_min_ = this->get_parameter("angle_min").as_double();
+  range_size_ = this->get_parameter("range_size_").as_double();
+  angle_increment_ = this->get_parameter("angle_increment").as_int();
+
   publish_odom_ = (odom_topic_ != "");
   kf_dist_linear_sq_ = kf_dist_linear_ * kf_dist_linear_;
 
@@ -266,16 +283,22 @@ void LaserScanMatcher::createCache (const sensor_msgs::msg::LaserScan::SharedPtr
 {
   a_cos_.clear();
   a_sin_.clear();
+  double input_angle_min_;
+  int input_range_size_;
+  double input_angle_increment_;
+  
+  input_.min_reading = (range_min_ == -10.0) ? scan_msg->range_min : range_min_;
+  input_.max_reading = (range_max_ == -10.0) ? scan_msg->range_max : range_max_;
+  input_angle_min_ = (angle_min_ == -10.0) ? scan_msg->angle_min : angle_min_;
+  input_range_size_ = (range_size_ == -10) ? scan_msg->ranges.size() : range_size;
+  input_angle_increment_ = (angle_increment_ == -10.0) ? scan_msg->angle_increment : angle_increment_;
 
-  for (unsigned int i = 0; i < scan_msg->ranges.size(); ++i)
+  for (unsigned int i = 0; i < input_range_size_; ++i)
   {
-    double angle = scan_msg->angle_min + i * scan_msg->angle_increment;
+    double angle = input_angle_min_ + i * input_angle_increment_;
     a_cos_.push_back(cos(angle));
     a_sin_.push_back(sin(angle));
   }
-
-  input_.min_reading = scan_msg->range_min;
-  input_.max_reading = scan_msg->range_max;
 }
 
 
