@@ -78,12 +78,22 @@ private:
   std::string map_frame_;
   std::string base_frame_;
   std::string odom_frame_;
+  std::string laser_scan_frame_;
+  std::string laser_scan_topic_;
   std::string odom_topic_;
+
 
   // Keyframe parameters
   double kf_dist_linear_;
   double kf_dist_linear_sq_;
   double kf_dist_angular_;
+
+  // Laser params
+  double range_min_;
+  double range_max_;
+  double angle_min_;
+  int range_samples_size_;
+  double angle_increment_;
 
   // For calculating odometry
   double prev_x;

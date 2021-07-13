@@ -76,12 +76,27 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
     "Which frame to use for the odom");
   add_parameter("map_frame", rclcpp::ParameterValue(std::string("map")),
     "Which frame to use for the map");
+  add_parameter("laser_scan_frame", rclcpp::ParameterValue(std::string("scan")),
+    "Which frame to use for the laser_scan_frame");
+  add_parameter("laser_scan_topic", rclcpp::ParameterValue(std::string("scan")),
+    "Which topic to subscrige for the laser_scan");
   add_parameter("kf_dist_linear", rclcpp::ParameterValue(0.10),
     "When to generate keyframe scan.");
   add_parameter("kf_dist_angular", rclcpp::ParameterValue(10.0* (M_PI/180.0)),
     "When to generate keyframe scan.");
   
+  // Laser params
 
+  add_parameter("range_min", rclcpp::ParameterValue(-10.0),
+    "Minimum range of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
+  add_parameter("range_max", rclcpp::ParameterValue(-10.0),
+    "Maximum range of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
+  add_parameter("angle_min", rclcpp::ParameterValue(-10.0),
+    "Minimum angle of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
+  add_parameter("range_samples_size", rclcpp::ParameterValue(-10),
+    "Number of samples of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
+  add_parameter("angle_increment", rclcpp::ParameterValue(-10.0),
+    "Angle increment of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
 
   // CSM parameters - comments copied from algos.h (by Andrea Censi)
   add_parameter("max_angular_correction_deg", rclcpp::ParameterValue(45.0),
@@ -185,10 +200,19 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
   map_frame_  = this->get_parameter("map_frame").as_string();
   base_frame_ = this->get_parameter("base_frame").as_string();
   odom_frame_ = this->get_parameter("odom_frame").as_string();
+  laser_scan_frame_ = this->get_parameter("laser_scan_frame").as_string();
+  laser_scan_topic_ = this->get_parameter("laser_scan_topic").as_string();
+
   kf_dist_linear_  = this->get_parameter("kf_dist_linear").as_double();
   kf_dist_angular_ = this->get_parameter("kf_dist_angular").as_double();
   odom_topic_   = this->get_parameter("publish_odom").as_string();
   publish_tf_   = this->get_parameter("publish_tf").as_bool(); 
+
+  range_min_ = this->get_parameter("range_min").as_double();
+  range_max_ = this->get_parameter("range_max").as_double();
+  angle_min_ = this->get_parameter("angle_min").as_double();
+  range_samples_size_ = this->get_parameter("range_samples_size").as_int();
+  angle_increment_ = this->get_parameter("angle_increment").as_double();
 
   publish_odom_ = (odom_topic_ != "");
   kf_dist_linear_sq_ = kf_dist_linear_ * kf_dist_linear_;
@@ -239,7 +263,7 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
 
 
   // Subscribers
-  this->scan_filter_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>("scan", 5, std::bind(&LaserScanMatcher::scanCallback, this, std::placeholders::_1));
+  this->scan_filter_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(laser_scan_topic_, 5, std::bind(&LaserScanMatcher::scanCallback, this, std::placeholders::_1));
   tf_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
   if (publish_tf_)
     tfB_ = std::make_shared<tf2_ros::TransformBroadcaster>(*this);
@@ -259,16 +283,22 @@ void LaserScanMatcher::createCache (const sensor_msgs::msg::LaserScan::SharedPtr
 {
   a_cos_.clear();
   a_sin_.clear();
+  double input_angle_min_;
+  int input_range_samples_size_;
+  double input_angle_increment_;
+  
+  input_.min_reading = (range_min_ == -10.0) ? scan_msg->range_min : range_min_;
+  input_.max_reading = (range_max_ == -10.0) ? scan_msg->range_max : range_max_;
+  input_angle_min_ = (angle_min_ == -10.0) ? scan_msg->angle_min : angle_min_;
+  input_range_samples_size_ = (range_samples_size_ == -10) ? scan_msg->ranges.size() : range_samples_size_;
+  input_angle_increment_ = (angle_increment_ == -10.0) ? scan_msg->angle_increment : angle_increment_;
 
-  for (unsigned int i = 0; i < scan_msg->ranges.size(); ++i)
+  for (unsigned int i = 0; i < input_range_samples_size_; ++i)
   {
-    double angle = scan_msg->angle_min + i * scan_msg->angle_increment;
+    double angle = input_angle_min_ + i * input_angle_increment_;
     a_cos_.push_back(cos(angle));
     a_sin_.push_back(sin(angle));
   }
-
-  input_.min_reading = scan_msg->range_min;
-  input_.max_reading = scan_msg->range_max;
 }
 
 
@@ -281,7 +311,7 @@ void LaserScanMatcher::scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr
     createCache(scan_msg);    // caches the sin and cos of all angles
 
     // cache the static tf from base to laser
-    if (!getBaseToLaserTf("laser"))
+    if (!getBaseToLaserTf(laser_scan_frame_))
     {
       RCLCPP_WARN(get_logger(),"Skipping scan");
       return;
