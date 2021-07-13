@@ -92,9 +92,9 @@ private:
   double range_min_;
   double range_max_;
   double angle_min_;
-  double angle_max_;
+  int range_samples_size_;
   double angle_increment_;
-  
+
   // For calculating odometry
   double prev_x;
   double prev_y;
