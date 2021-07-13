@@ -93,7 +93,7 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
     "Maximum range of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
   add_parameter("angle_min", rclcpp::ParameterValue(-10),
     "Minimum angle of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
-  add_parameter("range_size_", rclcpp::ParameterValue(-10),
+  add_parameter("range_samples_size_", rclcpp::ParameterValue(-10),
     "Number of samples of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
   add_parameter("angle_increment", rclcpp::ParameterValue(-10),
     "Angle increment of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
@@ -210,7 +210,7 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
   range_min_ = this->get_parameter("range_min").as_double();
   range_max_ = this->get_parameter("range_max").as_double();
   angle_min_ = this->get_parameter("angle_min").as_double();
-  range_size_ = this->get_parameter("range_size_").as_double();
+  range_samples_size_ = this->get_parameter("range_samples_size_").as_double();
   angle_increment_ = this->get_parameter("angle_increment").as_int();
 
   publish_odom_ = (odom_topic_ != "");
@@ -284,16 +284,16 @@ void LaserScanMatcher::createCache (const sensor_msgs::msg::LaserScan::SharedPtr
   a_cos_.clear();
   a_sin_.clear();
   double input_angle_min_;
-  int input_range_size_;
+  int input_range_samples_size_;
   double input_angle_increment_;
   
   input_.min_reading = (range_min_ == -10.0) ? scan_msg->range_min : range_min_;
   input_.max_reading = (range_max_ == -10.0) ? scan_msg->range_max : range_max_;
   input_angle_min_ = (angle_min_ == -10.0) ? scan_msg->angle_min : angle_min_;
-  input_range_size_ = (range_size_ == -10) ? scan_msg->ranges.size() : range_size;
+  input_range_samples_size_ = (range_samples_size_ == -10) ? scan_msg->ranges.size() : range_samples_size_;
   input_angle_increment_ = (angle_increment_ == -10.0) ? scan_msg->angle_increment : angle_increment_;
 
-  for (unsigned int i = 0; i < input_range_size_; ++i)
+  for (unsigned int i = 0; i < input_range_samples_size_; ++i)
   {
     double angle = input_angle_min_ + i * input_angle_increment_;
     a_cos_.push_back(cos(angle));
