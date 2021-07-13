@@ -87,15 +87,15 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
   
   // Laser params
 
-  add_parameter("range_min", rclcpp::ParameterValue(-10),
+  add_parameter("range_min", rclcpp::ParameterValue(-10.0),
     "Minimum range of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
-  add_parameter("range_max", rclcpp::ParameterValue(-10),
+  add_parameter("range_max", rclcpp::ParameterValue(-10.0),
     "Maximum range of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
-  add_parameter("angle_min", rclcpp::ParameterValue(-10),
+  add_parameter("angle_min", rclcpp::ParameterValue(-10.0),
     "Minimum angle of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
-  add_parameter("range_samples_size_", rclcpp::ParameterValue(-10),
+  add_parameter("range_samples_size", rclcpp::ParameterValue(-10),
     "Number of samples of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
-  add_parameter("angle_increment", rclcpp::ParameterValue(-10),
+  add_parameter("angle_increment", rclcpp::ParameterValue(-10.0),
     "Angle increment of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.");
 
   // CSM parameters - comments copied from algos.h (by Andrea Censi)
@@ -211,8 +211,8 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
   range_min_ = this->get_parameter("range_min").as_double();
   range_max_ = this->get_parameter("range_max").as_double();
   angle_min_ = this->get_parameter("angle_min").as_double();
-  range_samples_size_ = this->get_parameter("range_samples_size_").as_double();
-  angle_increment_ = this->get_parameter("angle_increment").as_int();
+  range_samples_size_ = this->get_parameter("range_samples_size").as_int();
+  angle_increment_ = this->get_parameter("angle_increment").as_double();
 
   publish_odom_ = (odom_topic_ != "");
   kf_dist_linear_sq_ = kf_dist_linear_ * kf_dist_linear_;
