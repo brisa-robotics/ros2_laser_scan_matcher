@@ -81,6 +81,7 @@ private:
   std::string laser_frame_;
   std::string odom_topic_;
 
+
   // Keyframe parameters
   double kf_dist_linear_;
   double kf_dist_linear_sq_;
