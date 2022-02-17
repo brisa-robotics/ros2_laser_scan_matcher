@@ -94,7 +94,6 @@ private:
   double angle_min_;
   int range_samples_size_;
   double angle_increment_;
-  
   bool initialized_;
   bool publish_odom_;
   bool publish_tf_;

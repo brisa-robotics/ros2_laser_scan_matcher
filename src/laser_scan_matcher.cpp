@@ -202,6 +202,7 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
   odom_frame_ = this->get_parameter("odom_frame").as_string();
   laser_frame_ = this->get_parameter("laser_frame").as_string();
   laser_topic_ = this->get_parameter("laser_topic").as_string();
+
   kf_dist_linear_  = this->get_parameter("kf_dist_linear").as_double();
   kf_dist_angular_ = this->get_parameter("kf_dist_angular").as_double();
   odom_topic_   = this->get_parameter("publish_odom").as_string();
@@ -311,6 +312,7 @@ void LaserScanMatcher::scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr
     createCache(scan_msg);    // caches the sin and cos of all angles
 
     // cache the static tf from base to laser
+
     if (!getBaseToLaserTf(laser_frame_))
     {
       RCLCPP_WARN(get_logger(),"Skipping scan");
