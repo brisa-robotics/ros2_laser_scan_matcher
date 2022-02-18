@@ -78,8 +78,8 @@ private:
   std::string map_frame_;
   std::string base_frame_;
   std::string odom_frame_;
-  std::string laser_scan_frame_;
-  std::string laser_scan_topic_;
+  std::string laser_frame_;
+  std::string laser_topic_;
   std::string odom_topic_;
 
 
@@ -94,17 +94,12 @@ private:
   double angle_min_;
   int range_samples_size_;
   double angle_increment_;
-
-  // For calculating odometry
-  double prev_x;
-  double prev_y;
-  double prev_angle;
-
   bool initialized_;
   bool publish_odom_;
   bool publish_tf_;
 
   tf2::Transform f2b_;     // fixed-to-base tf (pose of base frame in fixed frame)
+  tf2::Transform prev_f2b_; // previous fixed-to-base tf (for odometry calculation)
   tf2::Transform f2b_kf_;  // pose of the last keyframe scan in fixed frame
 
 

@@ -59,7 +59,7 @@ void LaserScanMatcher::add_parameter(
   }
 
 
-LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(false), prev_angle(0.0), prev_x(0.0), prev_y(0.0)
+LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(false)
 {
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
   // Initiate parameters
@@ -76,9 +76,9 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
     "Which frame to use for the odom");
   add_parameter("map_frame", rclcpp::ParameterValue(std::string("map")),
     "Which frame to use for the map");
-  add_parameter("laser_scan_frame", rclcpp::ParameterValue(std::string("scan")),
-    "Which frame to use for the laser_scan_frame");
-  add_parameter("laser_scan_topic", rclcpp::ParameterValue(std::string("scan")),
+  add_parameter("laser_frame", rclcpp::ParameterValue(std::string("laser")),
+    "Which frame to use for the laser");
+  add_parameter("laser_topic", rclcpp::ParameterValue(std::string("scan")),
     "Which topic to subscrige for the laser_scan");
   add_parameter("kf_dist_linear", rclcpp::ParameterValue(0.10),
     "When to generate keyframe scan.");
@@ -200,8 +200,8 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
   map_frame_  = this->get_parameter("map_frame").as_string();
   base_frame_ = this->get_parameter("base_frame").as_string();
   odom_frame_ = this->get_parameter("odom_frame").as_string();
-  laser_scan_frame_ = this->get_parameter("laser_scan_frame").as_string();
-  laser_scan_topic_ = this->get_parameter("laser_scan_topic").as_string();
+  laser_frame_ = this->get_parameter("laser_frame").as_string();
+  laser_topic_ = this->get_parameter("laser_topic").as_string();
 
   kf_dist_linear_  = this->get_parameter("kf_dist_linear").as_double();
   kf_dist_angular_ = this->get_parameter("kf_dist_angular").as_double();
@@ -251,6 +251,7 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
   // State variables
 
   f2b_.setIdentity();
+  prev_f2b_.setIdentity();
   f2b_kf_.setIdentity();
   input_.laser[0] = 0.0;
   input_.laser[1] = 0.0;
@@ -263,7 +264,7 @@ LaserScanMatcher::LaserScanMatcher() : Node("laser_scan_matcher"), initialized_(
 
 
   // Subscribers
-  this->scan_filter_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(laser_scan_topic_, rclcpp::SensorDataQoS(), std::bind(&LaserScanMatcher::scanCallback, this, std::placeholders::_1));
+  this->scan_filter_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(laser_topic_, rclcpp::SensorDataQoS(), std::bind(&LaserScanMatcher::scanCallback, this, std::placeholders::_1));
   tf_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
   if (publish_tf_)
     tfB_ = std::make_shared<tf2_ros::TransformBroadcaster>(*this);
@@ -311,7 +312,8 @@ void LaserScanMatcher::scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr
     createCache(scan_msg);    // caches the sin and cos of all angles
 
     // cache the static tf from base to laser
-    if (!getBaseToLaserTf(laser_scan_frame_))
+
+    if (!getBaseToLaserTf(laser_frame_))
     {
       RCLCPP_WARN(get_logger(),"Skipping scan");
       return;
@@ -473,14 +475,13 @@ bool LaserScanMatcher::processScan(LDP& curr_ldp_scan, const rclcpp::Time& time)
     odom_msg.pose.pose.orientation.z = f2b_.getRotation().z();
     odom_msg.pose.pose.orientation.w = f2b_.getRotation().w();
 
-    odom_msg.twist.twist.linear.y = (f2b_.getOrigin().getY() - prev_y)/dt;
-    odom_msg.twist.twist.linear.x = (f2b_.getOrigin().getX() - prev_x)/dt;
+    // Get pose difference in base frame and calculate velocities
+    auto pose_difference = prev_f2b_.inverse() * f2b_;
+    odom_msg.twist.twist.linear.x = pose_difference.getOrigin().getX()/dt;
+    odom_msg.twist.twist.linear.y = pose_difference.getOrigin().getY()/dt;
+    odom_msg.twist.twist.angular.z = tf2::getYaw(pose_difference.getRotation())/dt;
 
-    odom_msg.twist.twist.angular.x = (tf2::getYaw(f2b_.getRotation()) - prev_angle)/dt;
-
-    prev_x = f2b_.getOrigin().getX();
-    prev_y = f2b_.getOrigin().getY();
-    prev_angle = tf2::getYaw(f2b_.getRotation());
+    prev_f2b_ = f2b_;
 
     odom_publisher_->publish(odom_msg);
   }
